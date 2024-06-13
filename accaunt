@@ -1,0 +1,14 @@
+1. b689c85e0637c14c47361731f1caac908ea06ca1 - main
+2. b0a92252588c74bb6a714605aa19943070a761aa
+3. 049f525074e78ed46f32549cc30c836886c3be82
+4. 8f35fd2ba9997dd6b0a209767de89685ecbfb9d0
+5. b58614b52436908e012c7341b3c0cb7a0db60476
+------------------------------------------
+geth account new --datadir data - создание нового аккаунта - пароль 123
+------------------------------------------
+geth init --datadir data genesis.json - создание генезис блока
+
+geth --datadir data --networkid 12345 --unlock b689c85e0637c14c47361731f1caac908ea06ca1 --allow-insecure-unlock --http --http.corsdomain="*" --http.api web3,eth,debug,personal,net,miner --miner.etherbase b689c85e0637c14c47361731f1caac908ea06ca1 - запуск чатсной сети блокчейна
+geth attach --datadir data ipc:\\.\pipe\geth.ipc - создание отдельной консоли geth для того, чтобы управлять процессами в блокчейне
+
+    eth.blockNumber - номер блока
