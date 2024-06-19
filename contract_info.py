@@ -4,7 +4,7 @@ abi ='''
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
+				"indexed": true,
 				"internalType": "address",
 				"name": "owner",
 				"type": "address"
@@ -24,24 +24,31 @@ abi ='''
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "price",
+				"name": "dateTime",
 				"type": "uint256"
 			},
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "dateTime",
+				"name": "price",
 				"type": "uint256"
 			}
 		],
-		"name": "createdAd",
+		"name": "AdCreated",
 		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "addFunds",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
+				"indexed": true,
 				"internalType": "address",
 				"name": "owner",
 				"type": "address"
@@ -54,31 +61,121 @@ abi ='''
 			},
 			{
 				"indexed": false,
-				"internalType": "string",
-				"name": "photo",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "enum EstateAgency.EstateType",
-				"name": "esType",
-				"type": "uint8"
+				"internalType": "uint256",
+				"name": "adId",
+				"type": "uint256"
 			},
 			{
 				"indexed": false,
 				"internalType": "uint256",
 				"name": "dateTime",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "enum EstateAgency.AdvertisementStatus",
+				"name": "adStatus",
+				"type": "uint8"
 			}
 		],
-		"name": "createdEstate",
+		"name": "AdUpdated",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "adId",
+				"type": "uint256"
+			}
+		],
+		"name": "buyEstate",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_estateId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_price",
+				"type": "uint256"
+			}
+		],
+		"name": "createAd",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_size",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_photo",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_rooms",
+				"type": "uint256"
+			},
+			{
+				"internalType": "enum EstateAgency.EstateType",
+				"name": "_estateType",
+				"type": "uint8"
+			}
+		],
+		"name": "createEstate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "estateId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "dateTime",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "enum EstateAgency.EstateType",
+				"name": "estateType",
+				"type": "uint8"
+			}
+		],
+		"name": "EstateCreated",
 		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
+				"indexed": true,
 				"internalType": "address",
 				"name": "owner",
 				"type": "address"
@@ -92,13 +189,13 @@ abi ='''
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "estateId",
+				"name": "adId",
 				"type": "uint256"
 			},
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "adId",
+				"name": "estateId",
 				"type": "uint256"
 			},
 			{
@@ -110,7 +207,32 @@ abi ='''
 			{
 				"indexed": false,
 				"internalType": "uint256",
+				"name": "dateTime",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
 				"name": "price",
+				"type": "uint256"
+			}
+		],
+		"name": "EstatePurchased",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "estateId",
 				"type": "uint256"
 			},
 			{
@@ -118,18 +240,24 @@ abi ='''
 				"internalType": "uint256",
 				"name": "dateTime",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "isActive",
+				"type": "bool"
 			}
 		],
-		"name": "estatePurchased",
+		"name": "EstateUpdated",
 		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
+				"indexed": true,
 				"internalType": "address",
-				"name": "to",
+				"name": "receiver",
 				"type": "address"
 			},
 			{
@@ -145,76 +273,51 @@ abi ='''
 				"type": "uint256"
 			}
 		],
-		"name": "fundsBack",
+		"name": "FundsBack",
 		"type": "event"
 	},
 	{
-		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "estateId",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
 				"internalType": "uint256",
 				"name": "adId",
 				"type": "uint256"
 			},
 			{
-				"indexed": false,
 				"internalType": "enum EstateAgency.AdvertisementStatus",
-				"name": "adStatus",
+				"name": "_adStatus",
 				"type": "uint8"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "dateTime",
-				"type": "uint256"
 			}
 		],
-		"name": "updatedAd",
-		"type": "event"
+		"name": "updateAdStatus",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	},
 	{
-		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			},
-			{
-				"indexed": false,
 				"internalType": "uint256",
 				"name": "estateId",
 				"type": "uint256"
 			},
 			{
-				"indexed": false,
 				"internalType": "bool",
-				"name": "isActive",
+				"name": "_isActive",
 				"type": "bool"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "dateTime",
-				"type": "uint256"
 			}
 		],
-		"name": "updatedEstate",
-		"type": "event"
+		"name": "updateEstateStatus",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -268,65 +371,20 @@ abi ='''
 	{
 		"inputs": [
 			{
-				"internalType": "uint256",
-				"name": "estateId",
-				"type": "uint256"
-			},
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "balances",
+		"outputs": [
 			{
 				"internalType": "uint256",
-				"name": "adId",
+				"name": "",
 				"type": "uint256"
 			}
 		],
-		"name": "buyEstate",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "price",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "estateId",
-				"type": "uint256"
-			}
-		],
-		"name": "createAd",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "size",
-				"type": "uint256"
-			},
-			{
-				"internalType": "string",
-				"name": "photo",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "rooms",
-				"type": "uint256"
-			},
-			{
-				"internalType": "enum EstateAgency.EstateType",
-				"name": "esType",
-				"type": "uint8"
-			}
-		],
-		"name": "createEstate",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -371,7 +429,7 @@ abi ='''
 			},
 			{
 				"internalType": "enum EstateAgency.EstateType",
-				"name": "esType",
+				"name": "estateType",
 				"type": "uint8"
 			}
 		],
@@ -479,7 +537,7 @@ abi ='''
 					},
 					{
 						"internalType": "enum EstateAgency.EstateType",
-						"name": "esType",
+						"name": "estateType",
 						"type": "uint8"
 					}
 				],
@@ -489,54 +547,6 @@ abi ='''
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "estateId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "adId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "enum EstateAgency.AdvertisementStatus",
-				"name": "adStatus",
-				"type": "uint8"
-			}
-		],
-		"name": "updateAdStatus",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "estateId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "isActiveEs",
-				"type": "bool"
-			}
-		],
-		"name": "updateEstateStatus",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "withDraw",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ]

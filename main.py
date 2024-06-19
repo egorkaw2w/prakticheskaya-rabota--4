@@ -5,187 +5,264 @@ from contract_info import abi, contract_adress
 
 w3 = Web3(Web3.HTTPProvider('http://127.0.0.1:8545'))
 w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-contract = w3.eth.contract(address=contract_adress, abi=abi)
-accounts = w3.eth.accounts
+estate_agency_contract = w3.eth.contract(address=contract_adress, abi=abi)
 
-login = None
 
-def errors(e):
-    if "У вас недостаточно средств" in str(e):
-        print("У вас недостаточно средств")
-    elif "Вы не владелец недвижимоси" in str(e):
-        print("Вы не владелец недвижимости")
-    elif "Недвижимость недоступна" in str(e):
-        print("Недвижимость недоступна")
-    elif "Данное объявление закрыто" in str(e):
-        print("Данное объявление закрыто")
-    elif "Владелец не может купить свою недвижимость" in str(e):
-        print("Владелец не может купить свою недвижимость")
+account = None;
+def authenticate_user():
+    public_key_input = input("Введите адрес кошелька: ")
+    pass_key = input("Укажите пароль: ")
+
+    try:
+        unlocked = w3.geth.personal.unlock_account(public_key_input, pass_key)
+        if unlocked:
+            print("Доступ в систему предоставлен.")
+            return public_key_input
+        else:
+            print("Не удалось разблокировать аккаунт.")
+            return None
+    except Exception as authenticate_error:
+        if 'already unlocked' in str(authenticate_error).lower():
+            print("Аккаунт уже разблокирован.")
+            return public_key_input
+        else:
+            print(f"Произошла ошибка во время авторизации: {authenticate_error}")
+            return None
+
+def register_new_user():
+    while True:
+        secure_password = input("Создайте пароль (не менее 12 символов, включающий цифры и спецсимволы): ")
+        if is_password_secure(secure_password):
+            verify_password = input("Подтвердите ваш пароль: ")
+            if verify_password == secure_password:
+                try:
+                    new_account = w3.geth.personal.new_account(secure_password)
+                    print(f"Регистрация прошла успешно. Ваш новый адрес: {new_account}")
+                    break
+                except Exception as e:
+                    print(f"Произошла ошибка при регистрации: {e}")
+            else:
+                print("Пароли не совпадают. Пожалуйста, попробуйте снова.")
+        else:
+            print("Пароль слишком простой. Пароль должен содержать не менее 12 символов, включая цифры и спецсимволы.")
+
+def ensure_account_unlocked():
+    global account
+    pass_key = input(f"Введите пароль для аккаунта {account}: ")
+    try:
+        unlocked = w3.geth.personal.unlock_account(account, pass_key)
+        if unlocked:
+            print("Аккаунт успешно разблокирован.")
+        else:
+            print("Не удалось разблокировать аккаунт.")
+    except Exception as e:
+        if 'already unlocked' in str(e).lower():
+            print("Аккаунт уже разблокирован.")
+        else:
+            raise e
+
+def add_property():
+    global account;
+    prop_size = int(input("Укажите размер недвижимости в квадратных метрах: "))
+    prop_photo_url = input("Вставьте ссылку на фотографию недвижимости: ")
+    prop_rooms = int(input("Укажите количество комнат: "))
+    prop_type = int(input("Выберите тип объекта недвижимости (1 - Дом, 2 - Квартира, 3 - Лофт): ")) - 1
+
+    try:
+        estate_agency_contract.functions.createEstate(prop_size, prop_photo_url, prop_rooms, prop_type).transact({
+            "from": account
+        })
+        print(f"Объект недвижимости был успешно добавлен.")
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+
+def transaction_account_account():
+    sender_account = input("Введите адрес аккаунта отправителя: ")
+    ensure_account_unlocked(sender_account)
+    
+    receiver_account = input("Введите адрес аккаунта получателя: ")
+    amount_in_ether = float(input("Введите сумму в Ether для перевода: "))
+    amount_in_wei = w3.to_wei(amount_in_ether, 'ether')
+    
+    try:
+        tx_hash = w3.eth.send_transaction({
+            'from': sender_account,
+            'to': receiver_account,
+            'value': amount_in_wei
+        })
+        print(f"Перевод выполнен успешно. Хэш транзакции: {tx_hash.hex()}")
+    except Exception as e:
+        print(f"Произошла ошибка при переводе средств: {e}")
+
+def add_advertisement():
+    global account
+    estates = estate_agency_contract.functions.getEstates().call()
+    print("Доступная недвижимость:")
+    for estate in estates:
+        if estate[4] == account:
+            print(f"ID: {estate[0]}, Тип: {estate[6]}, Активное: {'Да' if estate[3] else 'Нет'}")
+    estate_id = int(input("Введите ID недвижимости для объявления: "))
+    ad_price_in_ether = float(input("Установите цену для объявления в Ether: "))
+    ad_price_in_wei = w3.to_wei(ad_price_in_ether, 'ether')
+    
+    try:
+        estate_agency_contract.functions.createAd(estate_id, ad_price_in_wei).transact({
+            "from": account
+        })
+        print(f"Объявление о продаже создано.")
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+
+def add_balance():
+    global account
+    sum_in_ether = float(input("Сколько эфира вы хотите добавить на свой баланс? Укажите сумму в Ether: "))
+    sum_in_wei = w3.to_wei(sum_in_ether, 'ether')
+    
+    try:
+        tx_hash = estate_agency_contract.functions.addFunds().transact({
+            'from': account,
+            'value': sum_in_wei
+        })
+        print(f"Ваш баланс пополнен на {sum_in_ether} эфир. Хэш транзакции: {tx_hash.hex()}")
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+
+def extract_funds():
+    global account
+    show_account_balance()
+    balance = estate_agency_contract.functions.getBalance().call({
+        "from": account
+    })
+    withdraw_amount_in_ether = float(input("Какую сумму в Ether вы желаете вывести? "))
+    withdraw_amount_in_wei = w3.to_wei(withdraw_amount_in_ether, 'ether')
+    
+    if balance >= withdraw_amount_in_wei:
+        try:
+            withdraw_tx = estate_agency_contract.functions.withdraw().transact({
+                "from": account
+            })
+            print(f"Средства в размере {withdraw_amount_in_ether} эфир выведены успешно. Транзакция: {withdraw_tx.hex()}")
+        except Exception as e:
+            print(f"Произошла ошибка при выводе средств: {e}")
     else:
-        print("Произошла неизвестная ошибка")
+        print("Недостаточно средств для вывода.")
 
-def menu():
-    print("Выберите действие: ")
-    print("1.Создать недвижимости")
-    print("2.Создать объявление")
-    print("3.Изменение недвижемости")
-    print("4.Изменение объявление")
-    print("5.Купить недвижимость")
-    print("6.Посмотреть все объявления")
-    print("7.Посмотреть все недвижимости")
-    print("8.Посмотреть баланс")
-    print("9.Выйти")
-    choice = input()
-    match choice:
-        case "1":
-            createEs()
-        case "2":
-            createAd()
-        case"3":
-            changeEs()
-        case "4":
-            changeAd()
-        case "5":
-            buy()
-        case"6":
-            getAllAds()
-        case "7":
-            getAllEs()
-        case"8":
-            getBalance()
-        case "9":
-             main()
-        case _:
-            print("Некорректный ввод")
-    menu()
-
-def createEs():
-    global login
-    size = input("Введите размер недвижимости: ")
-    picture = input("Введите фото недвижимости: ")
-    rooms = input("Введите кол-во комнат недвижимости: ")
-    type = input("Введите тип недвижимости: ")
+def show_account_balance():
+    global account
     try:
-        contract.functions.createEstate(int(size), str(picture), int(rooms), int(type)).transact({'from': login})
-        print("Недвижимость успешно создана")
-        menu()
-    except ValueError as e:
-        errors(e)
-    menu()
+        balance = estate_agency_contract.functions.getBalance().call({
+            "from": account
+        })
+        balance_in_ether = w3.from_wei(balance, 'ether')
+        print(f"Текущий баланс: {balance_in_ether} эфир")
+    except Exception as e:
+        print(f"Произошла ошибка при получении баланса: {e}")
 
-def createAd():
-    price = input("Введите цену объявления: ")
-    esId = input("Введите ID имущества: ")
+def alter_property_status():
+    property_id = int(input("Введите ID недвижимости, чтобы изменить её статус: "))
+    new_status = input("Введите новый статус (active/inactive): ").lower() == "active"
+    
     try:
-        contract.functions.createAd(int(price), int(esId)).transact({'from': login})
-        print("Объявление успешно создано")
-    except ValueError as e:
-        errors(e)
-    menu()
+        estate_agency_contract.functions.updateEstateStatus(property_id, new_status).transact({
+            "from": account
+        })
+        print(f"Статус недвижимости обновлён.")
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
 
-def changeEs():
-    esId = input("Введите ID имущества: ")
-    isActiveEs = input("Введите активна ли недвижимость (true/false): ")
+def alter_ad_status():
+    global account
+    ad_id = int(input("Введите ID объявления, чтобы изменить его статус: "))
+    new_status = int(input("Введите новый статус (1 - Открыто, 2 - Закрыто): "))
     try:
-        contract.functions.updateEstateStatus(int(esId), bool(isActiveEs)).transact({'from': login})
-        print("Недвижимость успешно изменена")
-    except ValueError as e:
-        errors(e)
-    menu()
+        estate_agency_contract.functions.updateAdStatus(ad_id, new_status).transact({
+            "from": account
+        })
+        print(f"Статус объявления обновлён.")
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
 
-def changeAd():
-    adId = input("Введите ID объявления: ")
-    esId = input("Введите ID имущества: ")
-    adStatus = input("Введите статус: ")
+def buy_property():
+    global account
+    ads = estate_agency_contract.functions.getAds().call()
+    print("Доступные объявления:")
+    for ad in ads:
+        if ad[3]: 
+            print(f"ID: {ads.index(ad)}, Цена: {w3.from_wei(ad[2], 'ether')} Ether, Владелец: {ad[0]}, Статус: {'Активное' if ad[5] == 0 else 'Закрыто'}")
+    
+    ad_id = int(input("Введите ID объявления для покупки: "))
     try:
-        contract.functions.updateAdStatus(int(adId), int(esId), int(adStatus)).transact({'from': login})
-        print("Объявление успешно изменено")
-    except ValueError as e:
-        errors(e)
-    menu()
+        ad_price = ads[ad_id][2]
+        balance = estate_agency_contract.functions.getBalance().call({
+            "from": account
+        })
+        
+        if balance >= ad_price:
+            estate_agency_contract.functions.buyEstate(ad_id).transact({
+                "from": account,
+                "value": ad_price
+            })
+            print(f"Недвижимость успешно куплена.")
+        else:
+            print("Недостаточно средств для покупки")
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
 
-def buy():
-    esID = input("Введите ID имущества: ")
-    adID = input("Введите ID объявления: ")
-    value = input("Введите средства: ")
-    value = w3.to_wei(value, 'ether')
-    try:
-        contract.functions.buyEstate(int(esID), int(adID)).transact({'from': login, 'value': value, 'gasPrice': w3.to_wei('10', 'ether')})
-        print("Недвижимость успешно куплена")
-    except ValueError as e:
-        errors(e)
-    menu()
-
-def getAllAds():
-    for ad in contract.functions.getAds().call():
-        print(f"Владелец: {ad[0]}\nЦена: {ad[2]}\n")
-    menu()
-
-def getAllEs():
-    for es in contract.functions.getEstates().call():
-        print(f"ID : {es[0]}\nЦена: {es[1]}\nОписание: {es[2]}\n")
-    menu()
-
-def getBalance():
-    global login
-    balance = contract.functions.getBalance().call({'from': login})
-    print("Баланс:", balance / 10**18, "ETH")
-    menu()
-
-
-
-def goodPass(password):
+def is_password_secure(password):
     if len(password) < 12:
         return False
-    if not re.search(r'[A-Z]', password):
+    if re.search(r"\d", password) is None:
         return False
-    if not re.search(r'[a-z]', password):
+    if re.search(r"[A-Za-z]", password) is None:
         return False
-    if not re.search(r'\d', password):
-        return False
-    if not re.search(r'[!@#$%^&*()]', password):
-        return False
-    if re.search(r'(.)\1\1', password):
-        return False
-    if re.search(r'password|qwerty|123456|111111', password, re.IGNORECASE):
+    if re.search(r"[!@#$%^&*()\-_=+{};:,<.>\[\]]", password) is None:
         return False
     return True
 
-def main():
-    global login
-    choice = int(input("1.Войти\n2.Зарегистрироваться\n"))
-    match choice:
-        case 1: 
-            login = input("Введите свой публичный ключ: ")
-            password = input("Введите ваш пароль: ")
-            try:
-                w3.geth.personal.unlock_account(login, password)
-                print("Успех ^_^")
-                menu()
-            except:
-                print("Неверный логин или пароль")
-                main()
-        case 2:
-            password = input("Введите ваш пароль: \n")
-            if goodPass(password):
-                newAcc = w3.eth.account.create(password)
-                print(f"Ваш аккаунт: {newAcc.address}")
-                balance = w3.to_wei(300,'ether')
-                w3.eth.send_transaction({
-                    'to': newAcc.address,
-                    'value': balance,
-                    'from': w3.eth.accounts[0],
-                    'gas': 2000000,
-                    'gasPrice': w3.eth.gas_price,
-                })
-                login = newAcc.address  
-                print("Регистрация прошла успешно!")  
-                main()
-            else:
-                print("Ну будем честны, пароль слабенький ()")
-                main()    
-        case _:
-             print("АШИБКА АЛАРМ ТАКОГО НЕТ!")
-             main()    
+def application_flow():
+    global account
+    user_account = None
+    authenticated = False
+    while True:
+        try:
+            if not authenticated:
+                action = input("Выберите действие: \n1 - Вход\n2 - Регистрация\n")
 
-main()
+                match action:
+                    case "1":
+                        user_account = authenticate_user()
+                        account = user_account
+                        authenticated = user_account is not None
+
+                    case "2":
+                        register_new_user()
+
+            else:
+                action = input("Выберите действие: \n1 - Пополнить баланс\n2 - Вывести средства\n3 - Проверить баланс\n4 - Добавить недвижимость\n5 - Добавить объявление\n6 - Изменить статус недвижимости\n7 - Купить недвижимость\n8 - Выйти\n")
+
+                match action:
+                    case "1":
+                        add_balance()
+                    case "2":
+                        extract_funds()
+                    case "3":
+                        show_account_balance()
+                    case "4":
+                        add_property()
+                    case "5":
+                        add_advertisement()
+                    case "6":
+                        alter_property_status()
+                    case "7":
+                        buy_property()
+                    case "8":
+                        authenticated = False
+                    case _:
+                        print("Неизвестная команда.")
+                        
+        except Exception as general_error:
+            print(f"Произошла ошибка: {general_error}")
+            continue
+
+if __name__ == '__main__':
+    application_flow()
