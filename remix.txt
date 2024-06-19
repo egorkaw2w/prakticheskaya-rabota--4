@@ -1,23 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0
+pragma solidity ^0.8.0;
 
-pragma solidity >=0.7.0 <0.9.0;
+contract EstateAgency {
+    enum EstateType { House, Flat, Loft }
+    enum AdvertisementStatus { Opend, Closed }
 
-contract EstateAgency{
-
-    enum EstateType {House, Flat, Loft} //перечисление типа недвижимости
-    enum AdvertisementStatus {Opend, Closed} //перечесление для статуса обьявления
-    
-    struct Estate{  //структура для недвижимости
+    struct Estate { 
         uint estateId;
         uint size;
         string photo;
         bool isActive;
         address owner;
         uint rooms;
-        EstateType esType;
+        EstateType estateType;
     }
 
-    struct Advertisement{ //структура для обьявления
+    struct Advertisement { 
         address owner;
         address buyer;
         uint price;
@@ -29,116 +27,108 @@ contract EstateAgency{
 
     Estate[] public estates;
     Advertisement[] public ads;
+    mapping(address => uint) public balances; 
 
-    event createdEstate(address owner, uint estateId, string photo, EstateType esType, uint dateTime);
-    event createdAd(address owner, uint estateId, uint adId, uint price, uint dateTime);
-    event updatedEstate(address owner, uint estateId, bool isActive, uint dateTime);
-    event updatedAd(address owner, uint estateId, uint adId, AdvertisementStatus adStatus, uint dateTime);
-    event estatePurchased(address owner, address buyer, uint estateId, uint adId, AdvertisementStatus adStatus, uint price, uint dateTime);
-    event fundsBack(address to, uint amount, uint dateTime);
+    event EstateCreated(address indexed owner, uint estateId, uint dateTime, EstateType estateType);
+    event AdCreated(address indexed owner, uint estateId, uint adId, uint dateTime, uint price);
+    event EstateUpdated(address indexed owner, uint estateId, uint dateTime, bool isActive);
+    event AdUpdated(address indexed owner, uint estateId, uint adId, uint dateTime, AdvertisementStatus adStatus);
+    event EstatePurchased(address indexed owner, address buyer, uint adId, uint estateId, AdvertisementStatus adStatus, uint dateTime, uint price);
+    event FundsBack(address indexed receiver, uint amount, uint dateTime);
 
-    modifier enouhtValue(uint value, uint price){
-        require(value >= price, unicode"У вас недостаточно средств");
+    modifier EnoughValue(address buyer, uint price) {
+        require(balances[buyer] >= price, unicode"Недостаточно средств");
         _;
     }
 
-    modifier onlyEstateOwner(uint estateId){
-        require(estates[estateId].owner == msg.sender, unicode"Вы не владелец недвижимоси");
+    modifier OnlyEstateOwner(uint estateId) {
+        require(estates[estateId].owner == msg.sender, unicode"Вы не владелец");
         _;
     }
 
-    modifier isActiveEstate(uint estateId){
+    modifier IsActiveEstate(uint estateId) {
         require(estates[estateId].isActive, unicode"Недвижимость недоступна");
         _;
     }
 
-    modifier isAdClosed(uint adId){
-        require(ads[adId].adStatus != AdvertisementStatus.Closed, unicode"Данное объявление закрыто");
+    modifier IsAdClosed(uint adId) {
+        require(ads[adId].adStatus != AdvertisementStatus.Closed, unicode"Объявление закрыто");
         _;
     }
 
-    modifier notOwner(uint adId){
+    modifier NotOwner(uint adId) {
         require(ads[adId].owner != msg.sender, unicode"Владелец не может купить свою недвижимость");
         _;
     }
 
-
-// нельзя создать дважды одно и тоже
-  function createEstate( uint size, string memory photo, uint rooms, EstateType esType) public{
-    require(size > 0, unicode"Площадь должна быть больше 0");
-    for(uint i = 0; i < estates.length; i++)
-    {
-       require(estates[i].size != size || estates[i].rooms != rooms ||
-                  estates[i].esType != esType ,unicode"Такая недвижимость уже существует");
-             
+    function createEstate(uint _size, string memory _photo, uint _rooms, EstateType _estateType) public {
+        estates.push(Estate(estates.length, _size, _photo, true, msg.sender, _rooms, _estateType));
+        emit EstateCreated(msg.sender, estates.length - 1, block.timestamp, _estateType);
     }
-    estates.push(Estate(estates.length, size, photo, true, msg.sender, rooms, esType));
-    emit createdEstate(msg.sender, estates.length, photo, esType, block.timestamp);
-  }
 
-//создание объявления на наличие недвижимости, 
-//недвижимость должна быть активной, 
-//объявление может создать только владелец недвижимости, 
-//мы не можем создать несколько объявлений по одной и той же недвижимости
-  function createAd (uint price, uint estateId) public onlyEstateOwner(estateId) isActiveEstate(estateId){
-    require(price > 0, unicode"Цена должна быть больше 0");
-    for(uint i = 0; i < ads.length; i++)
-    {
-    require(estateId != ads[i].estateId, unicode"Такая недвижимость уже существует");
+    function createAd(uint _estateId, uint _price) public {
+        require(estates[_estateId].isActive, unicode"Недвижимость не активна");
+        require(estates[_estateId].owner == msg.sender, unicode"Только владелец недвижимости может создать объявление");
+        ads.push(Advertisement(msg.sender, address(0), _price, block.timestamp, true, AdvertisementStatus.Opend, _estateId));
+        emit AdCreated(msg.sender, estates[_estateId].estateId, ads.length - 1, block.timestamp, _price);
     }
-    ads.push(Advertisement(msg.sender, address(0), price, block.timestamp, true, AdvertisementStatus.Opend, estateId));
-    emit createdAd(msg.sender, estateId, ads.length, price, block.timestamp);
-  }
 
-//это может делать только владелец недвижимости. 
-//и если мы меняем статус на false, то объявление (если оно есть) закрывается
-  function updateEstateStatus(uint estateId, bool isActiveEs) public onlyEstateOwner(estateId) {
-    if(!isActiveEs)
-    {
-      ads[estateId].adStatus = AdvertisementStatus.Closed;
-      emit updatedAd(msg.sender, estateId, estateId, ads[estateId].adStatus, block.timestamp);
+    function updateEstateStatus(uint estateId, bool _isActive) public OnlyEstateOwner(estateId) {
+        estates[estateId].isActive = _isActive;
+        if (!_isActive) {
+            for (uint i = 0; i < ads.length; i++) {
+                if (ads[i].estateId == estateId) {
+                    ads[i].adStatus = AdvertisementStatus.Closed;
+                    emit AdUpdated(ads[i].owner, ads[i].estateId, i, block.timestamp, AdvertisementStatus.Closed);
+                }
+            }
+        }
+        emit EstateUpdated(estates[estateId].owner, estateId, block.timestamp, _isActive);
     }
-    emit updatedEstate(msg.sender, estateId, isActiveEs, block.timestamp);
-  }
 
-//только владелец объявления, если статус closed, то мы не может открыть это объявдение заново
-  function updateAdStatus(uint estateId, uint adId, AdvertisementStatus adStatus) public onlyEstateOwner(estateId) isActiveEstate(estateId) isAdClosed(adId){
-    ads[adId].adStatus = adStatus;
-    emit updatedAd(msg.sender, estateId, adId, ads[adId].adStatus, block.timestamp);
+    function updateAdStatus(uint adId, AdvertisementStatus _adStatus) public {
+        require(msg.sender == ads[adId].owner, unicode"Только владелец недвижимости может обновить статус");
+        require(ads[adId].adStatus != AdvertisementStatus.Closed, unicode"Закрытые объявления нельзя обновить");
+        ads[adId].adStatus = _adStatus;
+        emit AdUpdated(ads[adId].owner, ads[adId].estateId, adId, block.timestamp, _adStatus);
+    }
+    function buyEstate(uint adId) public payable IsAdClosed(adId) EnoughValue(msg.sender, ads[adId].price) NotOwner(adId) {
+        ads[adId].buyer = msg.sender;
+        ads[adId].isActive = false;
+        uint estateId = ads[adId].estateId;
 
-  }
+        
+        payable(estates[estateId].owner).transfer(ads[adId].price);
+        balances[msg.sender] -= ads[adId].price;
+        balances[estates[estateId].owner] += ads[adId].price;
 
-function buyEstate(uint estateId, uint adId) public payable notOwner(adId) isAdClosed(adId) {
-    require(address(this).balance >= ads[adId].price, unicode"Недостаточно средств на смарт-контракте");
+        
+        emit EstatePurchased(ads[adId].owner, msg.sender, adId, ads[adId].estateId, ads[adId].adStatus, block.timestamp, ads[adId].price);
+    }
 
-    ads[adId].buyer = msg.sender;
-    ads[adId].adStatus = AdvertisementStatus.Closed;
-    estates[estateId].owner = msg.sender;
+    function withdraw() public {
+        uint amount = balances[msg.sender];
+        require(amount > 0, unicode"У вас нет денег");
+        balances[msg.sender] = 0;
+        payable(msg.sender).transfer(amount);
+        emit FundsBack(msg.sender, amount, block.timestamp);
+    }
 
-    payable(estates[estateId].owner).transfer(ads[adId].price);
-    emit estatePurchased(ads[adId].owner, ads[adId].buyer, estateId, adId, ads[adId].adStatus, ads[adId].price, block.timestamp);
-}
+    function getBalance() public view returns (uint) {
+        return balances[msg.sender];
+    }
 
-//проверка на не владельца, проверка на достаточное количество средств, проверка на статус объявления (не closed)
-  
+    function getEstates() public view returns (Estate[] memory) {
+        return estates;
+    }
 
-//мы не можем снять больше чем у нас есть
- function withDraw() public {
-    uint balance = address(this).balance;
-    payable(msg.sender).transfer(address(this).balance);
-    emit fundsBack(msg.sender, balance, block.timestamp);
-  }
+    function getAds() public view returns (Advertisement[] memory) {
+        return ads;
+    }
 
-  function getBalance() public view returns(uint){
-    return address(this).balance;
-  }
+    function addFunds() public payable {
 
-  function getEstates() public view returns(Estate[] memory)
-  {
-    return estates;
-  }
-  function getAds() public view returns(Advertisement[] memory)
-  {
-    return ads;
-  }
+        balances[msg.sender] += msg.value;
+    
+    }
 }
